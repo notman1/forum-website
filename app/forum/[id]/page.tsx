@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
+import { supabase, supabaseQueryWithRetry } from "@/lib/supabase"
 import { useAuth } from "@/app/providers"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
@@ -50,25 +50,24 @@ export default function ForumDetails() {
 
   const fetchForumDetails = async () => {
     try {
-      // Get forum data
-      const { data: forumData, error: forumError } = await supabase.from("forums").select("*").eq("id", id).single()
+      // Get forum data with retry
+      const { data: forumData, error: forumError } = await supabaseQueryWithRetry(() =>
+        supabase.from("forums").select("*").eq("id", id).single(),
+      )
 
       if (forumError) throw forumError
 
-      // Get author username
-      const { data: authorData, error: authorError } = await supabase
-        .from("profiles")
-        .select("username")
-        .eq("id", forumData.user_id)
-        .single()
+      // Get author username with retry
+      const { data: authorData, error: authorError } = await supabaseQueryWithRetry(() =>
+        supabase.from("profiles").select("username").eq("id", forumData.user_id).single(),
+      )
 
       if (authorError && authorError.code !== "PGRST116") throw authorError
 
-      // Get likes count
-      const { count, error: likesError } = await supabase
-        .from("likes")
-        .select("*", { count: "exact", head: true })
-        .eq("forum_id", id)
+      // Get likes count with retry
+      const { count, error: likesError } = await supabaseQueryWithRetry(() =>
+        supabase.from("likes").select("*", { count: "exact", head: true }).eq("forum_id", id),
+      )
 
       if (likesError) throw likesError
 
@@ -86,12 +85,10 @@ export default function ForumDetails() {
 
   const fetchReplies = async () => {
     try {
-      // Get replies
-      const { data: repliesData, error: repliesError } = await supabase
-        .from("replies")
-        .select("*")
-        .eq("forum_id", id)
-        .order("created_at", { ascending: true })
+      // Get replies with retry
+      const { data: repliesData, error: repliesError } = await supabaseQueryWithRetry(() =>
+        supabase.from("replies").select("*").eq("forum_id", id).order("created_at", { ascending: true }),
+      )
 
       if (repliesError) throw repliesError
 
@@ -103,11 +100,10 @@ export default function ForumDetails() {
       // Get all unique user IDs from replies
       const userIds = [...new Set(repliesData.map((reply) => reply.user_id))]
 
-      // Fetch profiles for those users
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, username")
-        .in("id", userIds)
+      // Fetch profiles for those users with retry
+      const { data: profilesData, error: profilesError } = await supabaseQueryWithRetry(() =>
+        supabase.from("profiles").select("id, username").in("id", userIds),
+      )
 
       if (profilesError) throw profilesError
 
@@ -132,12 +128,9 @@ export default function ForumDetails() {
   const checkLikeStatus = async () => {
     if (!user) return
     try {
-      const { data, error } = await supabase
-        .from("likes")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("forum_id", id)
-        .single()
+      const { data, error } = await supabaseQueryWithRetry(() =>
+        supabase.from("likes").select("id").eq("user_id", user.id).eq("forum_id", id).single(),
+      )
 
       if (error && error.code !== "PGRST116") throw error
       setLiked(!!data)
@@ -159,32 +152,32 @@ export default function ForumDetails() {
     }
 
     // Fetch the latest forum status before submitting
-    const { data: latestForum, error: forumError } = await supabase
-      .from("forums")
-      .select("status")
-      .eq("id", id)
-      .single()
-
-    if (forumError) {
-      console.error("Error checking forum status:", forumError)
-      alert("Error submitting reply. Please try again.")
-      return
-    }
-
-    if (latestForum.status !== "open") {
-      alert("This forum is no longer accepting replies")
-      // Refresh the forum data to show the updated status
-      fetchForumDetails()
-      return
-    }
-
     try {
+      const { data: latestForum, error: forumError } = await supabaseQueryWithRetry(() =>
+        supabase.from("forums").select("status").eq("id", id).single(),
+      )
+
+      if (forumError) {
+        console.error("Error checking forum status:", forumError)
+        alert("Error submitting reply. Please try again.")
+        return
+      }
+
+      if (latestForum.status !== "open") {
+        alert("This forum is no longer accepting replies")
+        // Refresh the forum data to show the updated status
+        fetchForumDetails()
+        return
+      }
+
       setSubmitting(true)
-      const { error } = await supabase.from("replies").insert({
-        content: newReply.trim(),
-        user_id: user.id,
-        forum_id: id,
-      })
+      const { error } = await supabaseQueryWithRetry(() =>
+        supabase.from("replies").insert({
+          content: newReply.trim(),
+          user_id: user.id,
+          forum_id: id,
+        }),
+      )
 
       if (error) throw error
       setNewReply("")
@@ -204,10 +197,12 @@ export default function ForumDetails() {
     }
 
     try {
-      const { data, error } = await supabase.rpc("toggle_like", {
-        p_user_id: user.id,
-        p_forum_id: id,
-      })
+      const { data, error } = await supabaseQueryWithRetry(() =>
+        supabase.rpc("toggle_like", {
+          p_user_id: user.id,
+          p_forum_id: id,
+        }),
+      )
 
       if (error) throw error
       setLiked(data[0].liked)

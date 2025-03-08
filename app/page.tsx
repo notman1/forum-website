@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { supabase } from "@/lib/supabase"
+import { supabase, supabaseQueryWithRetry } from "@/lib/supabase"
 import { useAuth } from "@/app/providers"
 import { formatDistanceToNow } from "date-fns"
 
@@ -34,22 +34,26 @@ export default function Home() {
       setIsLoading(true)
       setError(null)
 
-      // First, fetch all forums
-      const { data: forumsData, error: forumsError } = await supabase
-        .from("forums")
-        .select("*")
-        .order("created_at", { ascending: false })
+      // First, fetch all forums with retry logic
+      const { data: forumsData, error: forumsError } = await supabaseQueryWithRetry(() =>
+        supabase.from("forums").select("*").order("created_at", { ascending: false }),
+      )
 
       if (forumsError) throw forumsError
+
+      if (!forumsData || forumsData.length === 0) {
+        setForums([])
+        setIsLoading(false)
+        return
+      }
 
       // Get all unique user IDs from forums
       const userIds = [...new Set(forumsData.map((forum) => forum.user_id))]
 
-      // Fetch profiles for those users
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, username")
-        .in("id", userIds)
+      // Fetch profiles for those users with retry logic
+      const { data: profilesData, error: profilesError } = await supabaseQueryWithRetry(() =>
+        supabase.from("profiles").select("id, username").in("id", userIds),
+      )
 
       if (profilesError) throw profilesError
 
@@ -59,26 +63,27 @@ export default function Home() {
         usernameMap.set(profile.id, profile.username || "Unknown")
       })
 
-      // Get likes counts for all forums
+      // Simplified approach for likes - get all at once
       const forumIds = forumsData.map((forum) => forum.id)
 
-      // Get likes count for each forum
-      const likesCountPromises = forumIds.map(async (forumId) => {
-        const { count, error } = await supabase
-          .from("likes")
-          .select("*", { count: "exact", head: true })
-          .eq("forum_id", forumId)
-
-        return { forumId, count: count || 0 }
-      })
-
-      const likesResults = await Promise.all(likesCountPromises)
-
-      // Create a map of forum_id to likes count
+      // Initialize likes map with zeros
       const likesMap = new Map()
-      likesResults.forEach((item) => {
-        likesMap.set(item.forumId, item.count)
-      })
+      forumIds.forEach((id) => likesMap.set(id, 0))
+
+      // Try to get likes counts, but don't fail if this part fails
+      try {
+        // For each forum, get the likes count
+        for (const forumId of forumIds) {
+          const { count } = await supabase
+            .from("likes")
+            .select("*", { count: "exact", head: true })
+            .eq("forum_id", forumId)
+
+          likesMap.set(forumId, count || 0)
+        }
+      } catch (likesError) {
+        console.error("Error fetching likes counts, using zeros:", likesError)
+      }
 
       // Combine the data
       const formattedForums = forumsData.map((forum) => ({

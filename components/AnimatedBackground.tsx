@@ -27,6 +27,18 @@ export function AnimatedBackground() {
       dy: number
 
       constructor() {
+        // Ensure canvas is not null before accessing its properties
+        if (!canvas) {
+          // Provide default values if canvas is null
+          this.x = 0
+          this.y = 0
+          this.radius = 0
+          this.dx = 0
+          this.dy = 0
+          return
+        }
+
+        // Now we can safely use canvas since we've checked it's not null
         this.x = Math.random() * canvas.width
         this.y = Math.random() * canvas.height
         this.radius = Math.random() * 300 + 150 // Increased size
@@ -107,3 +119,4 @@ export function AnimatedBackground() {
 
   return <canvas ref={canvasRef} className="fixed inset-0 -z-10 bg-black" />
 }
+

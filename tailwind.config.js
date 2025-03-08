@@ -7,7 +7,8 @@ module.exports = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "app/**/*.{ts,tsx}",
     "components/**/*.{ts,tsx}",
-  ],
+      "*.{js,ts,jsx,tsx,mdx}"
+],
   theme: {
     extend: {
       colors: {
