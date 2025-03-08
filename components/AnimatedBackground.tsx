@@ -7,9 +7,11 @@ export function AnimatedBackground() {
 
   useEffect(() => {
     const canvas = canvasRef.current
+    // Early return if canvas is null
     if (!canvas) return
 
     const ctx = canvas.getContext("2d")
+    // Early return if context is null
     if (!ctx) return
 
     canvas.width = window.innerWidth
@@ -33,7 +35,9 @@ export function AnimatedBackground() {
       }
 
       draw() {
+        // Add null check for ctx
         if (!ctx) return
+
         ctx.beginPath()
         const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius)
         gradient.addColorStop(0, "rgba(128, 0, 128, 0.4)") // Increased opacity
@@ -44,6 +48,9 @@ export function AnimatedBackground() {
       }
 
       update() {
+        // Add null check for canvas
+        if (!canvas) return
+
         if (this.x + this.radius > canvas.width || this.x - this.radius < 0) {
           this.dx = -this.dx
         }
@@ -64,6 +71,9 @@ export function AnimatedBackground() {
     }
 
     function animate() {
+      // Add null check for ctx
+      if (!ctx) return
+
       requestAnimationFrame(animate)
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
@@ -81,6 +91,9 @@ export function AnimatedBackground() {
     animate()
 
     const handleResize = () => {
+      // Add null check for canvas
+      if (!canvas) return
+
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
     }
@@ -94,4 +107,3 @@ export function AnimatedBackground() {
 
   return <canvas ref={canvasRef} className="fixed inset-0 -z-10 bg-black" />
 }
-
