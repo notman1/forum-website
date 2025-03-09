@@ -29,6 +29,15 @@ interface Reply {
   author_username: string
 }
 
+// Define an interface for the raw reply data from Supabase
+interface RawReply {
+  id: string
+  content: string
+  created_at: string
+  user_id: string
+  forum_id: string
+}
+
 export default function ForumDetails() {
   const [forum, setForum] = useState<Forum | null>(null)
   const [replies, setReplies] = useState<Reply[]>([])
@@ -98,7 +107,8 @@ export default function ForumDetails() {
       }
 
       // Get all unique user IDs from replies
-      const userIds = [...new Set(repliesData.map((reply) => reply.user_id))]
+      // Fix the TypeScript error by explicitly typing the parameter and the result
+      const userIds: string[] = [...new Set(repliesData.map((reply: RawReply) => reply.user_id))]
 
       // Fetch profiles for those users with retry
       const { data: profilesData, error: profilesError } = await supabaseQueryWithRetry(() =>
@@ -108,13 +118,13 @@ export default function ForumDetails() {
       if (profilesError) throw profilesError
 
       // Create a map of user_id to username
-      const usernameMap = new Map()
+      const usernameMap = new Map<string, string>()
       profilesData?.forEach((profile) => {
         usernameMap.set(profile.id, profile.username || "Unknown")
       })
 
       // Combine the data
-      const formattedReplies = repliesData.map((reply) => ({
+      const formattedReplies = repliesData.map((reply: RawReply) => ({
         ...reply,
         author_username: usernameMap.get(reply.user_id) || "Unknown",
       }))
