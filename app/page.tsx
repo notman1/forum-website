@@ -48,8 +48,7 @@ export default function Home() {
       }
 
       // Get all unique user IDs from forums
-      const userIds = [...new Set(forumsData.map((forum) => forum.user_id))]
-
+      const userIds = [...new Set(forumsData.map((forum: any) => forum.user_id))]
       // Fetch profiles for those users with retry logic
       const { data: profilesData, error: profilesError } = await supabaseQueryWithRetry(() =>
         supabase.from("profiles").select("id, username").in("id", userIds),
