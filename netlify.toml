@@ -1,9 +1,9 @@
 [build]
-  command = "npm run build"
+  command = "npm install --legacy-peer-deps && npm run build"
   publish = ".next"
 
 [build.environment]
-  NETLIFY_NEXT_PLUGIN_SKIP = "true"
+  GO_VERSION = "1.20"  # Specify a more recent Go version
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
