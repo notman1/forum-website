@@ -9,7 +9,7 @@ import { formatDistanceToNow } from "date-fns"
 interface Forum {
   id: string
   title: string
-  description: string
+  description?: string
   tags: string[]
   status: "open" | "closed" | "solved"
   created_at: string
