@@ -7,7 +7,7 @@ import type React from "react" // Added import for React
 export const metadata = {
   title: "NerdForums - A Community for Tech Enthusiasts",
   description: "Join NerdForums to discuss technology, programming, and more with like-minded enthusiasts.",
-    generator: 'v0.dev'
+  
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
