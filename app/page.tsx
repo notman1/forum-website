@@ -6,6 +6,11 @@ import { supabase, supabaseQueryWithRetry } from "@/lib/supabase"
 import { useAuth } from "@/app/providers"
 import { formatDistanceToNow } from "date-fns"
 
+interface Profile {
+  id: string;
+  username: string;
+}
+
 interface Forum {
   id: string
   title: string
@@ -58,9 +63,9 @@ export default function Home() {
 
       // Create a map of user_id to username
       const usernameMap = new Map()
-      profilesData?.forEach((profile) => {
-        usernameMap.set(profile.id, profile.username || "Unknown")
-      })
+      profilesData?.forEach((profile: { id: string; username: string }) => {
+        usernameMap.set(profile.id, profile.username || "Unknown");
+      });
 
       // Simplified approach for likes - get all at once
       const forumIds = forumsData.map((forum) => forum.id)
